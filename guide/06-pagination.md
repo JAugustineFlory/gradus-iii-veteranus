@@ -54,8 +54,10 @@ of fetching, and **without** limit and offset.
 <summary>Hint — counting a filtered query</summary>
 
 Build the filtered query once. Count it with
-`select(func.count()).select_from(filtered.subquery())`, then separately
-add order, limit, and offset to fetch the page.
+`await db.scalar(select(func.count()).select_from(filtered.subquery()))`
+— `scalar` returns the single value instead of a list — then separately
+add order, limit, and offset to fetch the page with
+`await db.scalars(...)`.
 </details>
 
 Docs:
@@ -73,7 +75,7 @@ query length:
 
 ```python
 @router.get("/search")
-def search(
+async def search(
     q: Annotated[str, Query(min_length=3)],
     ...
 ```

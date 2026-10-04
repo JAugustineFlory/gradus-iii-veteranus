@@ -12,12 +12,12 @@ is a decision you record in your README's **Decisions** section.
 
 | ID | Requirement |
 | --- | --- |
-| **INF-1** | PostgreSQL **must** run in Docker, started with `docker compose up -d` from the repo root. Data **must** survive `docker compose down` followed by `up` (a named volume). |
+| **INF-1** | PostgreSQL **must** run in Docker, started with `docker compose up -d` from the repo root, on host port **5435** (so it can run beside Tiro on 5433 and Miles on 5434). Data **must** survive `docker compose down` followed by `up` (a named volume). |
 | **INF-2** | There **must** be two databases: one for development and one for tests. Tests **must never** touch the development database. |
 | **INF-3** | Backend configuration **must** come from environment variables through `pydantic-settings`, and **must** also be readable from a `backend/.env` file. A `backend/.env.example` listing every setting **must** be committed; `.env` **must not** be. Settings: `DATABASE_URL`, `TEST_DATABASE_URL`, `FRONTEND_ORIGIN`. |
 | **INF-4** | The test database's schema **must** be built by running your Alembic migrations — not `Base.metadata.create_all`. |
 | **INF-5** | Every backend test **must** start with empty tables, and tests **must** pass in any order. No test may assume a particular `id` value. |
-| **INF-6** | No SQLite-specific code may run against PostgreSQL. |
+| **INF-6** | Database access in the request path **must** be asynchronous: an async engine and `AsyncSession` with the asyncpg driver, every database call awaited, and no synchronous engine or driver imported by `app/`. Relationships read during a request **must** be loaded eagerly — no `MissingGreenlet` errors. |
 | **INF-7** | A GitHub Actions workflow **must** run on every push and pull request: backend lint and tests (against a PostgreSQL service) and frontend lint, type-check, and tests. The README **must** show the workflow's status badge. |
 | **INF-8** | Coverage thresholds **must** be enforced, failing the run when not met: **95%** backend, **90%** frontend (lines). |
 | **INF-9** | The Husky pre-commit hook **must** run the same checks as in Miles. |

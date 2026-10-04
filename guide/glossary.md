@@ -1,7 +1,8 @@
 # Glossary (Veteranus)
 
-New terms in GRADUS III. For earlier terms, see the glossaries in
-**Tiro** and **Miles**. The lesson where each term first appears is in
+New terms in GRADUS III. For earlier terms — including Docker, images,
+containers, volumes, `psql`, drivers, `async`/`await`, and eager
+loading — see the glossaries in **Tiro** and **Miles**. The lesson where each term first appears is in
 brackets.
 
 ---
@@ -33,8 +34,6 @@ parent is deleted (`ON DELETE CASCADE`).
 **Cleanup function** [07] — The function an effect returns; React runs
 it before the effect runs again and when the component goes away.
 
-**Container** [02] — A running instance of a Docker image.
-
 **Continuous integration (CI)** [03] — Automatically running every check
 on a clean machine for every push.
 
@@ -53,12 +52,6 @@ control timing.
 **Derived state** [07] — A value calculated from other state during
 render, instead of stored separately.
 
-**Docker Compose** [02] — A YAML file describing containers, started
-together with `docker compose up`.
-
-**Driver** [02] — The library SQLAlchemy uses to talk to a specific
-database (here, psycopg).
-
 **Envelope** [06] — A wrapper object around a list that adds information
 like `total`.
 
@@ -67,12 +60,6 @@ such as `lower(name)`.
 
 **Fixture scope** [02] — How often a fixture runs: per test (default),
 per module, or once per session.
-
-**Health check** [02] — A command that reports whether a service is
-ready, used by Docker and CI.
-
-**Image** [02] — A packaged, read-only snapshot of software, used to
-start containers.
 
 **Job (GitHub Actions)** [03] — A group of steps that runs on one fresh
 machine.
@@ -83,10 +70,9 @@ by offset.
 **Limit / offset** [06] — Pagination by "return N rows, after skipping
 M."
 
-**Port mapping** [02] — Connecting a port on your machine to a port
-inside a container (`host:container`).
-
-**`psql`** [02] — PostgreSQL's command-line client.
+**Programmatic Alembic** [02] — Running Alembic commands as Python
+functions (`command.upgrade(config, "head")`), for example from a test
+fixture.
 
 **`pydantic-settings`** [02] — A library for typed configuration read
 from environment variables and `.env` files.
@@ -115,11 +101,8 @@ made before writing them.
 
 **`timestamptz`** [05] — PostgreSQL's time-zone-aware timestamp type.
 
-**Transaction** [02] — A group of database changes that succeed or fail
-together, and can be rolled back.
-
-**Volume** [02] — Docker storage that survives when the container is
-removed.
+**Truncate** [02] — Empty a table in one fast statement
+(`TRUNCATE ... RESTART IDENTITY CASCADE`), resetting its id sequence.
 
 **Work breakdown structure (WBS)** [00] — A goal broken down into
 smaller pieces until each is a concrete task.

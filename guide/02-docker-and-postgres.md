@@ -1,169 +1,44 @@
-# 02 — Docker and PostgreSQL
+# 02 — Settings and the test database
 
 **Requirements covered:** INF-1, INF-2, INF-3, INF-4, INF-5, INF-6
 
-**Outcome:** PostgreSQL running in Docker; a backend that reads typed
-settings from the environment or a `.env` file; and a test suite that
-builds its database by running your migrations.
+**Outcome:** PostgreSQL running in Docker (from memory), a backend that
+reads typed settings from the environment or a `.env` file, and a test
+suite that builds its database by **running your migrations**.
 
 Scaffold the repo, backend, and frontend first (Miles lesson 01 —
-entirely from memory this time).
+entirely from memory this time, no hints).
 
 ---
 
-## Primer: Docker
+## Retrieval: Docker, PostgreSQL, and async (INF-1, INF-2, INF-6)
 
-**The problem Docker solves.** Installing PostgreSQL directly on your
-machine means a different install on Windows, macOS, and Linux, version
-clashes between projects, and "works on my machine" bugs. Docker runs
-software in an isolated, identical box on every machine.
+You've done all of this twice. No primer — only the target.
 
-| Term | Plain English |
+| Setting | Value |
 | --- | --- |
-| **Image** | A packaged, read-only snapshot of software and everything it needs — e.g. `postgres:17`. Downloaded from Docker Hub. |
-| **Container** | A running instance of an image. You can start, stop, and delete it; the image is unchanged. |
-| **Volume** | Storage that lives *outside* the container, so data survives when the container is deleted. |
-| **Port mapping** | `"5432:5432"` connects port 5432 on *your* machine to port 5432 *inside* the container. Format: `host:container`. |
-| **Docker Compose** | A YAML file (`compose.yaml`) describing one or more containers, so `docker compose up` starts everything the same way every time. |
+| Image | `postgres:17` (pinned) |
+| User / password / dev database | `veteranus` / `veteranus` / `veteranus` |
+| Test database | `veteranus_test` |
+| Host port → container port | **5435** → 5432 |
+| Data | a named volume |
+| Readiness | a `pg_isready` health check |
 
-**Install:** Docker Desktop from <https://docs.docker.com/get-started/get-docker/>.
-On Windows it requires WSL 2; the installer walks you through it.
+- [ ] `compose.yaml` and an init script that creates the test database
+- [ ] `docker compose up -d --wait` → **healthy**; `\l` in `psql` lists
+      both databases
+- [ ] Backend dependencies: FastAPI, `sqlalchemy[asyncio]`, asyncpg,
+      Alembic; dev: pytest, pytest-asyncio, pytest-cov, Ruff
+- [ ] pytest configured for async tests (auto mode, function-scoped
+      loop)
+- [ ] Alembic initialized with the **async** template
+- [ ] An async engine, an `AsyncSession` factory with
+      `expire_on_commit=False`, an async `get_db`, and a `Base` with a
+      naming convention (INF-6)
 
-**Check:**
-
-```bash
-docker --version
-docker compose version
-docker run hello-world
-```
-
-✅ The last one prints *Hello from Docker!*
-
-### A PostgreSQL service in Compose
-
-This is new infrastructure, so here's a complete, annotated example.
-Put it at the repo root as `compose.yaml`:
-
-```yaml
-services:
-  db:
-    image: postgres:17          # pin a major version
-    environment:
-      POSTGRES_USER: veteranus
-      POSTGRES_PASSWORD: veteranus
-      POSTGRES_DB: veteranus    # the development database
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U veteranus"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-volumes:
-  pgdata:
-```
-
-- **Pin the version.** `postgres:latest` changes under you. (Newer
-  major versions also change where data is stored inside the container,
-  which breaks the volume path above.)
-- **`environment`** — the official image reads these on **first
-  start** to create a user and a database.
-- **`volumes`** — the named volume `pgdata` holds the data (INF-1).
-- **`healthcheck`** — lets Docker (and later, CI) know when Postgres is
-  actually ready to accept connections, not just started.
-- These credentials are for a **local development** database only.
-  Never reuse them anywhere real.
-
-```bash
-docker compose up -d        # -d: run in the background
-docker compose ps           # STATUS should become "healthy"
-docker compose logs db      # see what Postgres is saying
-docker compose down         # stop and remove the container (volume kept)
-docker compose down -v      # …and delete the volume (all data!)
-```
-
-Docs: <https://docs.docker.com/compose/gettingstarted/> ·
-<https://hub.docker.com/_/postgres>
-
-### Talking to PostgreSQL directly
-
-`psql` is PostgreSQL's command-line client. It's already inside the
-container:
-
-```bash
-docker compose exec db psql -U veteranus -d veteranus
-```
-
-| Command | Does |
-| --- | --- |
-| `\l` | list databases |
-| `\dt` | list tables |
-| `\d applications` | describe a table |
-| `SELECT * FROM applications;` | query (end with `;`) |
-| `\q` | quit |
-
-### Your task: INF-2 (the test database)
-
-The Compose file above creates only the development database. You need
-a second one for tests.
-
-<details>
-<summary>Hint 1</summary>
-
-Read the **Initialization scripts** section of the Postgres image's
-Docker Hub page. Files mounted into a particular folder run once, when
-the database is first created.
-</details>
-
-<details>
-<summary>Hint 2</summary>
-
-A one-line `.sql` file with a `CREATE DATABASE` statement, mounted from a
-folder in your repo. Init scripts only run on a **fresh** volume — after
-adding one, `docker compose down -v` and `up -d` again.
-</details>
-
-**Checkpoint:** in `psql`, `\l` lists both databases.
-
----
-
-## Primer: PostgreSQL from Python
-
-### The driver
-
-SQLAlchemy doesn't talk to PostgreSQL itself; it uses a **driver**.
-Install **psycopg** (version 3):
-
-```bash
-uv add "psycopg[binary]"
-```
-
-### Connection URLs
-
-```text
-postgresql+psycopg://veteranus:veteranus@localhost:5432/veteranus
-└──┬─────┘ └──┬──┘   └──┬────┘ └──┬────┘ └──┬────┘ └┬─┘ └──┬────┘
- dialect   driver     user    password    host   port  database
-```
-
-### Differences from SQLite that will bite you
-
-- **Real types.** PostgreSQL enforces column types and lengths strictly.
-  A string too long for `String(100)` is an error, not silently stored.
-- **Foreign keys are always enforced.** Your Miles `PRAGMA` listener is
-  SQLite-only (INF-6).
-- **`check_same_thread`** is a SQLite-only connection argument.
-  Passing it to PostgreSQL is an error (INF-6).
-- **ids come from sequences**, which don't rewind when you roll back or
-  delete. That's one reason for INF-5's "no assumed ids."
-- **Batch mode** in Alembic isn't needed for PostgreSQL. Leaving it on
-  is harmless.
-
-Docs:
-<https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg>
+If you need to look something up, the references are Tiro lessons 04–05
+and Miles lessons 01–02 — but try first. Every item you look up goes on
+your debrief list.
 
 ---
 
@@ -221,9 +96,9 @@ from**. Run backend commands from `backend/`, and keep `.env` there.
 
 ## Primer: a test database built by migrations (INF-4, INF-5)
 
-In Miles, each test created tables with `create_all` on a throwaway
-in-memory database. That never tested your **migrations**, and
-PostgreSQL has no in-memory mode. Now:
+In Tiro and Miles, an `engine` fixture called `create_all` before every
+test. That never tested your **migrations** — a broken migration could
+sit behind a green test suite. Now:
 
 1. **Once per test run**, bring the test database's schema up to date
    by running Alembic's `upgrade head` against `TEST_DATABASE_URL`.
@@ -244,6 +119,21 @@ command.upgrade(config, "head")
 
 Docs: <https://alembic.sqlalchemy.org/en/latest/api/commands.html>
 
+### The async wrinkle
+
+Look at the bottom of your async `migrations/env.py`: online migrations
+run through **`asyncio.run(...)`**. `asyncio.run` starts a brand-new
+event loop — and Python refuses to start one **while another is already
+running**:
+
+```text
+RuntimeError: asyncio.run() cannot be called from a running event loop
+```
+
+An `async def` fixture or test runs *inside* pytest-asyncio's event
+loop. A plain `def` fixture doesn't. So: *what kind of fixture should
+call `command.upgrade`?*
+
 <details>
 <summary>Hint — Alembic ignores the URL you set</summary>
 
@@ -262,6 +152,15 @@ for the whole run instead of once per test.
 <https://docs.pytest.org/en/stable/how-to/fixtures.html#scope-sharing-fixtures-across-classes-modules-packages-or-session>
 </details>
 
+<details>
+<summary>Hint — the async wrinkle</summary>
+
+Make the migration fixture a **plain, synchronous, session-scoped**
+fixture. It runs before any test's event loop exists, so `asyncio.run`
+inside `env.py` is free to start its own. Your per-test `async`
+fixtures can then depend on it.
+</details>
+
 ### Emptying tables between tests — two approaches
 
 | Approach | How | Trade-off |
@@ -271,14 +170,25 @@ for the whole run instead of once per test.
 
 Either satisfies INF-5. Pick one, and record why under **Decisions**.
 
-Docs for the rollback approach:
-<https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites>
+- Truncate with an async connection:
+  `await connection.execute(text("TRUNCATE ..."))` inside
+  `async with engine.begin() as connection:`.
+- The rollback approach works with `AsyncSession` too:
+  <https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites>
 
 <details>
 <summary>Hint — an autouse fixture</summary>
 
 `@pytest.fixture(autouse=True)` runs for every test without being named
 as a parameter — handy for "empty the tables."
+</details>
+
+<details>
+<summary>Hint — "attached to a different loop" between tests</summary>
+
+Same cause as in Tiro: a pooled connection opened in one test's event
+loop, reused in the next. Create the test engine with
+`poolclass=NullPool`, or create it per test.
 </details>
 
 <details>
@@ -292,12 +202,14 @@ escape it as `%%`. (Ours doesn't — but real ones might.)
 
 ## Checkpoint
 
-- ✅ `docker compose up -d` → `db` is **healthy**
+- ✅ `docker compose up -d --wait` → `db` is **healthy** on port 5435
 - ✅ Both databases exist (`\l`)
 - ✅ `uv run alembic upgrade head` creates tables in the **development**
   database
-- ✅ A health test and one database test pass, and afterward the
-  **development** database is unchanged (INF-2)
+- ✅ A health test and one database test pass; in `psql`, the **test**
+  database has your tables (built by migrations — check
+  `alembic_version`), and the **development** database is unchanged
+  (INF-2, INF-4)
 - ✅ `docker compose down` then `up -d` — your development data is
   still there (INF-1)
 - ✅ `backend/.env.example` is committed; `backend/.env` is not

@@ -3,12 +3,12 @@
 **Requirements covered:** CO-1, CO-2, CO-3, AP-1, AP-2, AP-3, AP-5,
 AP-6, AP-7, UI-1
 
-**Outcome:** everything Miles did, rebuilt on PostgreSQL — this time
-with tests you wrote.
+**Outcome:** everything Miles did, rebuilt — this time with tests you
+wrote.
 
 This lesson is almost entirely **retrieval**. You've built all of it
-before. The new parts are writing every test yourself and one
-PostgreSQL-flavored requirement (CO-3).
+before, on this exact stack. The new parts are writing every test
+yourself and one PostgreSQL-flavored requirement (CO-3).
 
 ---
 
@@ -38,8 +38,8 @@ build — and your Miles tests assumed things Veteranus forbids, like
 Compare against the id the API *gave you*:
 
 ```python
-created = create_company(client, "Acme")
-response = client.get(...)
+created = await create_company(client, "Acme")
+response = await client.get(...)
 assert response.json()["company"]["id"] == created["id"]
 ```
 
@@ -55,10 +55,23 @@ returns a function** can live in `conftest.py` and be shared:
 ```python
 @pytest.fixture
 def make_widget(client):
-    def _make(name="Sprocket"):
+    async def _make(name="Sprocket"):
         ...
     return _make
 ```
+
+The fixture itself can be plain `def` — it only *returns* a function.
+The returned function is `async`, so tests call it with
+`await make_widget("Gear")`.
+</details>
+
+<details>
+<summary>Hint — MissingGreenlet in the nested company (INF-6)</summary>
+
+Same as Miles lesson 03: load `Application.company` eagerly, and refresh
+it after a commit that changes `company_id`. If you add more
+relationships in lesson 05, ask the same question for each: *is it read
+during a request?*
 </details>
 
 ---

@@ -25,9 +25,12 @@ The last of three tiers.
 The job application tracker, one last time, from an empty folder — now
 built the way a production team would:
 
-- **PostgreSQL** running in **Docker** instead of a SQLite file
-- Backend tests running against a real PostgreSQL test database, built
-  by your own migrations
+- The same stack as Tiro and Miles — FastAPI, Pydantic, async
+  SQLAlchemy with asyncpg, Alembic, and PostgreSQL in Docker (host port
+  **5435**) — set up entirely from memory
+- **Typed settings** with pydantic-settings and `.env` files
+- Backend tests running against a PostgreSQL test database built by
+  **your own migrations**, not `create_all`
 - **Continuous integration**: every push to GitHub runs every check in
   the cloud
 - A **status history** for each application, recording every change —
@@ -72,10 +75,12 @@ prove it. The primers and docs cover every new concept.
 
 ### Reinforced (no guidance)
 
-Everything from Tiro and Miles: uv, FastAPI, routers, Pydantic
-validation, SQLAlchemy models and relationships, Alembic, Vite, React,
-TypeScript, Vitest, Testing Library, mocking `fetch` and modules, error
-handling, Husky, Ruff, ESLint.
+Everything from Tiro and Miles: uv, Docker Compose, PostgreSQL and
+`psql`, FastAPI, routers, Pydantic validation, `async`/`await`, async
+SQLAlchemy with asyncpg, relationships and eager loading, async pytest
+fixtures, Alembic (async template), Vite, React, TypeScript, Vitest,
+Testing Library, mocking `fetch` and modules, error handling, Husky,
+Ruff, ESLint.
 
 ### New in Veteranus
 
@@ -88,10 +93,9 @@ handling, Husky, Ruff, ESLint.
 
 **Infrastructure**
 
-- **Docker** fundamentals: images, containers, volumes, ports
-- **Docker Compose** for local services
-- **PostgreSQL**: connection URLs, `psql`, and differences from SQLite
 - **`pydantic-settings`** for typed configuration and `.env` files
+- Running **Alembic programmatically** from a test fixture, and how
+  that interacts with the async migration template
 - **GitHub Actions**: workflows, jobs, steps, service containers
 - **Coverage thresholds** that fail the build
 
@@ -126,7 +130,7 @@ this template → Create a new repository**, then clone *your* copy.
 | --- | --- | --- |
 | 00 | [Operation order](guide/00-operation-order.md) | Your WBS and test list |
 | 01 | [Requirements](guide/01-requirements.md) | *(the spec — keep it open)* |
-| 02 | [Docker and PostgreSQL](guide/02-docker-and-postgres.md) | Postgres in Docker, config, test database |
+| 02 | [Settings and the test database](guide/02-docker-and-postgres.md) | Docker from memory, typed settings, a migration-built test database |
 | 03 | [Continuous integration](guide/03-continuous-integration.md) | Every push checked on GitHub |
 | 04 | [Rebuild the core](guide/04-rebuild-the-core.md) | Miles's features on PostgreSQL |
 | 05 | [Status history and data migration](guide/05-status-history.md) | An audit trail, backfilled and tested |

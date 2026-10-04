@@ -61,8 +61,14 @@ HI-5 says "enforced by the database." How could a test prove the
 <summary>Hint</summary>
 
 Delete the application with a **raw SQL statement** (bypassing the ORM
-entirely), then count its history rows.
+entirely), then count its history rows. With an async session:
+`await session.execute(text("DELETE FROM ..."), {...})`.
 </details>
+
+> **Async reminder (INF-6).** `Application.status_changes` (if you add
+> that relationship) must never be lazy-loaded during a request. The
+> history endpoint can simply query `StatusChange` rows directly — no
+> relationship access needed.
 
 Docs:
 <https://docs.sqlalchemy.org/en/20/orm/cascades.html#using-foreign-key-on-delete-cascade-with-orm-relationships>
@@ -206,12 +212,28 @@ this instead:
 - Use raw SQL in step 3 for the same reason as the golden rule: your
   models describe *today's* schema, not the one at step 2.
 
+### The async wrinkle, again
+
+Steps 1, 2, 4, and 6 call Alembic, whose async `env.py` uses
+`asyncio.run` — which can't run inside pytest-asyncio's event loop
+(lesson 02). So the migration test itself should be a **plain `def`
+test**, not `async def`.
+
+But step 3 (inserting rows) and step 5 (reading them back) need the
+database, and asyncpg is async-only. *How can a synchronous test run a
+few lines of async code?*
+
 <details>
-<summary>Hint — running raw SQL in a test</summary>
+<summary>Hint — running raw SQL from a sync test</summary>
+
+Write a small `async def` helper that opens an engine on the test
+database, runs the SQL, and disposes the engine. Call it from the sync
+test with **`asyncio.run(helper())`** — exactly what Alembic itself
+does.
 
 ```python
-with engine.begin() as connection:
-    connection.execute(text("INSERT …"), {"name": "Acme"})
+async with engine.begin() as connection:
+    await connection.execute(text("INSERT …"), {"name": "Acme"})
 ```
 
 `begin()` commits automatically when the block ends. `text` comes from

@@ -21,7 +21,7 @@ Your Husky hook checks commits on *your* machine. But:
 
 **Continuous integration** (CI) runs the checks on a clean machine, from
 a fresh clone, on every push. If it passes there, it's not an accident
-of your setup. It's the fresh-clone test from Tiro lesson 08 — automated
+of your setup. It's the fresh-clone test from Tiro lesson 09 — automated
 and run every time.
 
 ---
@@ -106,6 +106,12 @@ jobs:
 - **`services.postgres`** starts PostgreSQL next to the job, reachable
   at `localhost:5432`. Its database is created directly as the *test*
   database — CI never needs a development database.
+- **Port 5432, not 5435.** Your local Compose file maps 5435 to avoid
+  clashing with Tiro and Miles. The CI runner is a fresh machine with
+  nothing else on it, so the standard port is fine — and that's why the
+  URL comes from `TEST_DATABASE_URL` instead of being hard-coded.
+- **The URL needs the async driver**, exactly like your local one:
+  `postgresql+asyncpg://…`.
 - **`options`** with the health check makes the job wait until Postgres
   is ready.
 - **`defaults.run.working-directory`** means every `run:` step starts in

@@ -9,8 +9,8 @@ write code until both are done.**
 ## The briefing (SMEAC)
 
 **Situation.** Your Miles app works, but it wouldn't survive contact
-with real users: it runs on a file-based database, nobody checks it
-automatically, it forgets the history of each application, it would
+with real users: its settings are untyped `os.getenv` calls, its tests
+never exercise the migrations, nobody checks it automatically, it forgets the history of each application, it would
 choke on a thousand applications, and `App.tsx` is doing too much.
 
 **Mission.** Rebuild the tracker from an empty folder so that every
@@ -19,9 +19,10 @@ proven by a test you wrote.
 
 **Execution.** The recommended order — each phase builds on the last:
 
-1. Infrastructure: Docker, PostgreSQL, config, test database (lesson 02)
+1. Infrastructure: Docker and PostgreSQL from memory, typed settings, a
+   migration-built test database (lesson 02)
 2. Continuous integration, *before* features (lesson 03)
-3. Core features from Miles, on PostgreSQL (lesson 04)
+3. Core features from Miles, with tests you wrote (lesson 04)
 4. Status history and the data migration (lesson 05)
 5. Pagination (lesson 06)
 6. Custom hooks and race conditions (lesson 07)
@@ -122,7 +123,7 @@ Carry the ID into the tests themselves, so anyone can find which test
 proves which requirement:
 
 ```python
-def test_hi3_patch_without_status_change_records_nothing(client):
+async def test_hi3_patch_without_status_change_records_nothing(client):
     ...
 ```
 

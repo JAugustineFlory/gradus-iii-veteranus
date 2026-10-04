@@ -5,21 +5,19 @@ before, see **Tiro's** and **Miles's** `guide/troubleshooting.md` too.
 
 ---
 
-## Docker and PostgreSQL
+## Docker, PostgreSQL, and async
+
+The basics (Docker not running, init scripts, `down -v`, credentials,
+missing `await`, `MissingGreenlet`) are in **Tiro's** and **Miles's**
+troubleshooting pages. New or different here:
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `docker: command not found` or *Cannot connect to the Docker daemon* | Docker Desktop isn't installed or isn't running | Start Docker Desktop and wait until it says it's running |
-| `Bind for 0.0.0.0:5432 failed: port is already allocated` | Another PostgreSQL (maybe installed directly) already uses port 5432 | Stop it, or map a different host port: `"5433:5432"`, and use `5433` in your URLs |
-| `docker compose ps` never shows **healthy** | Postgres failed to start | `docker compose logs db` and read the last lines |
-| The test database doesn't exist, even though you added an init script | Init scripts only run when the volume is **empty** | `docker compose down -v` (deletes all data), then `up -d` |
-| Your data vanished after restarting | You ran `down -v`, or the volume isn't mounted | `-v` deletes volumes. Check the `volumes:` section of `compose.yaml` |
-| The container keeps restarting after changing the image version | Newer PostgreSQL major versions store data in a different place, or can't read an older version's data | Pin the version you started with. To change versions, `down -v` and start fresh (development data only!) |
-| `password authentication failed for user` | The URL's user or password doesn't match `compose.yaml`, or the volume was created with different credentials | Credentials are only applied on first start. Fix the URL, or `down -v` to recreate |
-| `ModuleNotFoundError: No module named 'psycopg'` | The driver isn't installed | `uv add "psycopg[binary]"` |
-| `Can't load plugin: sqlalchemy.dialects:postgresql.psycopg2` | The URL starts `postgresql://` without a driver name, so SQLAlchemy looks for the older `psycopg2` | Use `postgresql+psycopg://…` |
-| `invalid connection option "check_same_thread"` | SQLite-only argument passed to PostgreSQL (INF-6) | Only pass it when the URL is SQLite — or remove it |
-| `value too long for type character varying(100)` | PostgreSQL enforces lengths that SQLite ignored | This is PostgreSQL doing its job. Make sure validation (`max_length`) rejects it first with a `422` |
+| `Bind for 0.0.0.0:5435 failed: port is already allocated` | Another copy of Veteranus (e.g. a fresh clone) is running | `docker compose down` in the other copy |
+| `Can't load plugin: sqlalchemy.dialects:postgresql.psycopg2` | A URL (often in `.env` or CI) is missing `+asyncpg` | Use `postgresql+asyncpg://…` everywhere |
+| `RuntimeError: asyncio.run() cannot be called from a running event loop` | Alembic's async `env.py` was called from an `async def` fixture or test | Call `command.upgrade` / `downgrade` from a plain `def` fixture or test (lessons 02 and 05) |
+| `... attached to a different loop` / `Event loop is closed` between tests | An engine or pooled connection from one test's event loop reused in another | Use `poolclass=NullPool` for the test engine, or create it per test |
+| `value too long for type character varying(100)` | PostgreSQL enforcing a column length | This is PostgreSQL doing its job. Make sure validation (`max_length`) rejects it first with a `422` |
 
 ---
 

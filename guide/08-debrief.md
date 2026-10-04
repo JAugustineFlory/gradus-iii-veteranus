@@ -38,8 +38,10 @@ These can't be unit tests; verify each by hand:
       database unchanged
 - [ ] **INF-4** Your test setup runs migrations; `create_all` appears
       nowhere in `backend/`
-- [ ] **INF-6** No `check_same_thread` or `PRAGMA` runs against
-      PostgreSQL (search for both)
+- [ ] **INF-6** `app/` uses only the async engine and `AsyncSession`
+      with asyncpg (`grep -rw create_engine backend/app` finds
+      nothing; only `create_async_engine` is used), and no request
+      ever raises `MissingGreenlet`
 - [ ] **INF-7** The badge shows **passing** on `main`
 - [ ] **INF-8** Lowering coverage below a threshold fails CI
 - [ ] **INF-9** Committing runs every local check
@@ -89,8 +91,10 @@ Without looking, can you:
 
 - [ ] Break a project into a WBS and a test list tagged with
       requirements
-- [ ] Run PostgreSQL in Docker and explain images, containers, volumes,
-      and port mappings
+- [ ] Run PostgreSQL in Docker from memory, and explain images,
+      containers, volumes, and port mappings
+- [ ] Explain why Alembic's async `env.py` must be called from
+      synchronous test code
 - [ ] Configure an app with `pydantic-settings` and `.env` files
 - [ ] Build a test database by running migrations, and isolate tests
       from each other
